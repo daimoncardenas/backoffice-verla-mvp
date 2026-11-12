@@ -11,6 +11,7 @@ import type { AuthContext } from "../../auth/types/auth.types";
 import { hashPassword } from "../../auth/services/password.service";
 import { PermissionModel } from "../../permission/entities/permission.entity";
 import { UserAccountModel } from "../../user-account/entities/user-account.entity";
+import { EmployeeTypeModel } from "../../employee-type/entities/employee-type.entity";
 import { recordHistoryChange } from "../../history-change/services/history.service";
 import { PartnerModel, type Partner } from "../entities/partner.entity";
 
@@ -27,6 +28,42 @@ export class PartnerConflictError extends Error {
     this.name = "PartnerConflictError";
   }
 }
+
+const DEFAULT_EMPLOYEE_TYPE_CODES: Record<string, string[]> = {
+  COORDINATOR: [
+    "DASHBOARD_READ",
+    "EMPLOYEE_LIST",
+    "EMPLOYEE_READ",
+    "EMPLOYEE_CREATE",
+    "EMPLOYEE_UPDATE",
+    "GOAL_LIST",
+    "GOAL_READ",
+    "GOAL_CREATE",
+    "GOAL_UPDATE",
+    "GOAL_ASSIGN",
+    "GOAL_METRICS",
+    "ACTIVITY_ALL",
+    "ACTIVITY_TYPE_LIST",
+    "OFFER_LIST",
+    "OFFER_READ",
+    "CITY_LIST",
+    "CITY_READ",
+    "PROFILE_ALL",
+  ],
+  SELLER: [
+    "DASHBOARD_READ",
+    "ACTIVITY_ALL",
+    "ACTIVITY_TYPE_LIST",
+    "GOAL_LIST",
+    "GOAL_READ",
+    "GOAL_METRICS",
+    "OFFER_LIST",
+    "OFFER_READ",
+    "CITY_LIST",
+    "CITY_READ",
+    "PROFILE_ALL",
+  ],
+};
 
 export interface CreatePartnerInput {
   name: string;
@@ -125,10 +162,16 @@ export async function createPartner(
     organization_id: context.organization_id,
     is_active: true,
   })
-    .select("_id")
+    .select("_id code")
     .lean();
   const enabledPermissionIds = permissions.map(
     (permission) => permission._id as Types.ObjectId,
+  );
+  const permissionIdByCode = new Map(
+    permissions.map((permission) => [
+      permission.code,
+      permission._id as Types.ObjectId,
+    ]),
   );
 
   const session = await mongoose.startSession();
@@ -245,6 +288,61 @@ export async function createPartner(
           },
         },
       );
+
+      for (const [code, permissionCodes] of Object.entries(
+        DEFAULT_EMPLOYEE_TYPE_CODES,
+      )) {
+        const permissionIds = permissionCodes
+          .map((permissionCode) => permissionIdByCode.get(permissionCode))
+          .filter((id): id is Types.ObjectId => id !== undefined);
+
+        const [employeeType] = await EmployeeTypeModel.create(
+          [
+            {
+              organization_id: context.organization_id,
+              partner_id: document._id,
+              code,
+              name: code,
+              description: null,
+              permission_ids: permissionIds,
+              is_system: true,
+              is_active: true,
+              deleted_at: null,
+              deleted_by: null,
+              created_by: context.account_id,
+              updated_by: context.account_id,
+              version: 0,
+            },
+          ],
+          { session },
+        );
+
+        await recordHistoryChange(
+          session,
+          {
+            organization_id: context.organization_id,
+            partner_id: document._id,
+            actor_user_id: context.account_id,
+            request_id: requestId,
+          },
+          {
+            entity_name: "employee_type",
+            record_id: employeeType._id,
+            action: "CREATE",
+            previous_values: null,
+            new_values: {
+              code: employeeType.code,
+              name: employeeType.name,
+              permission_ids: employeeType.permission_ids.map((id) =>
+                id.toString(),
+              ),
+              is_system: employeeType.is_system,
+              is_active: employeeType.is_active,
+              version: employeeType.version,
+            },
+          },
+        );
+      }
     });
 
     if (!createdId) {
