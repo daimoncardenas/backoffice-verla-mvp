@@ -17,8 +17,6 @@ function getMongoConfig(): { uri: string; dbName: string } {
   return { uri, dbName };
 }
 
-const { uri, dbName } = getMongoConfig();
-
 interface MongooseCache {
   connection: Mongoose | null;
   promise: Promise<Mongoose> | null;
@@ -34,6 +32,8 @@ const cached = (globalForMongoose.mongooseCache ??= {
 });
 
 export async function connectToDatabase(): Promise<Mongoose> {
+  const { uri, dbName } = getMongoConfig();
+
   if (cached.connection) {
     return cached.connection;
   }
