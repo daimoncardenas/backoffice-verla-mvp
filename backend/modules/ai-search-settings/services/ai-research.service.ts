@@ -261,6 +261,46 @@ function normalizeProposal(value: unknown): GeneratedProposal | null {
   };
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function fallbackBanner(proposal: GeneratedProposal): string {
+  const title = escapeXml(proposal.title).slice(0, 92);
+  const subtitle = escapeXml(
+    proposal.content.replace(/\s+/g, " ").trim(),
+  ).slice(0, 190);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07111f"/>
+      <stop offset="55%" stop-color="#0b2238"/>
+      <stop offset="100%" stop-color="#0c3b45"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1080" cy="90" r="220" fill="#22d3ee" opacity="0.08"/>
+  <circle cx="1080" cy="90" r="150" fill="#22d3ee" opacity="0.10"/>
+  <circle cx="120" cy="560" r="170" fill="#2dd4bf" opacity="0.06"/>
+  <text x="72" y="92" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="5">VERLA · RED DE ALIADOS</text>
+  <text x="72" y="220" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700">${title}</text>
+  <text x="72" y="290" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="24">${subtitle}</text>
+  <rect x="72" y="390" width="274" height="64" rx="32" fill="url(#accent)"/>
+  <text x="209" y="432" text-anchor="middle" fill="#06121f" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">Conoce la oferta</text>
+  <text x="72" y="540" fill="#94a3b8" font-family="Arial, Helvetica, sans-serif" font-size="20">Internet hogar y fibra · Cobertura sujeta a disponibilidad</text>
+</svg>`;
+}
+
 async function generateImage(
   proposal: GeneratedProposal,
   runId: string,
@@ -268,11 +308,13 @@ async function generateImage(
 ): Promise<{ url: string; storage_key: string } | null> {
   const svg = await deepSeekJson<{ svg: string }>(
     "You create original SVG promotional banners. Return only JSON with an svg string. Use a 1200x630 viewBox, dark navy and teal palette, no scripts, no external images, no foreignObject.",
-    `Create an SVG banner for this VERLA home internet proposal.
+    `Create one compact, valid SVG banner for this VERLA home internet proposal.
 Title: ${proposal.title}
 Copy: ${proposal.content.slice(0, 500)}
 Image brief: ${proposal.image_brief}
-Return JSON: {"svg":"<svg ...>...</svg>"}`,
+Use a 1200x630 viewBox, dark navy and teal palette, and no scripts or external assets.
+Keep the SVG under 10000 characters and always close the svg tag.
+Return only JSON: {"svg":"<svg ...>...</svg>"}`,
   ).catch((error) => {
     console.warn("AI image generation failed:", error instanceof Error ? error.message : "unknown");
     return null;
@@ -285,9 +327,18 @@ Return JSON: {"svg":"<svg ...>...</svg>"}`,
     markup = markup.slice(svgStart);
   }
 
-  if (!markup || !markup.startsWith("<svg") || /<script/i.test(markup)) {
-    console.warn("AI image markup invalid:", markup.slice(0, 40), markup.length);
-    return null;
+  if (
+    !markup ||
+    !markup.startsWith("<svg") ||
+    !/<\/svg>\s*$/i.test(markup) ||
+    /<script/i.test(markup)
+  ) {
+    console.warn(
+      "AI image markup invalid; using fallback banner:",
+      markup.slice(0, 40),
+      markup.length,
+    );
+    markup = fallbackBanner(proposal);
   }
 
   const key = `offers/${runId}/${index + 1}.svg`;

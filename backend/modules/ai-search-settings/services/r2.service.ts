@@ -41,7 +41,11 @@ export async function uploadOfferImage(
     );
 
     return `${publicBase.replace(/\/$/, "")}/${key}`;
-  } catch {
+  } catch (error) {
+    console.error(
+      "R2 image upload failed:",
+      error instanceof Error ? error.message : "unknown error",
+    );
     return null;
   }
 }
