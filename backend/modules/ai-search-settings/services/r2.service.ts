@@ -1,6 +1,7 @@
 import "server-only";
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getStore } from "@netlify/blobs";
 
 export async function uploadOfferImage(
   key: string,
@@ -20,7 +21,7 @@ export async function uploadOfferImage(
     !secretAccessKey ||
     !publicBase
   ) {
-    return null;
+    return storeFallbackImage(key, body);
   }
 
   try {
@@ -43,7 +44,47 @@ export async function uploadOfferImage(
     return `${publicBase.replace(/\/$/, "")}/${key}`;
   } catch (error) {
     console.error(
-      "R2 image upload failed:",
+      "R2 image upload failed; trying Netlify Blobs:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return storeFallbackImage(key, body);
+  }
+}
+
+async function storeFallbackImage(
+  key: string,
+  body: Buffer,
+): Promise<string | null> {
+  try {
+    const store = getStore("offer-images");
+    const arrayBuffer = body.buffer.slice(
+      body.byteOffset,
+      body.byteOffset + body.byteLength,
+    ) as ArrayBuffer;
+
+    await store.set(key, arrayBuffer, {
+      metadata: { contentType: "image/svg+xml" },
+    });
+
+    const base =
+      process.env.URL ??
+      process.env.DEPLOY_PRIME_URL ??
+      process.env.NEXT_PUBLIC_SITE_URL;
+
+    if (!base) {
+      console.error("Netlify Blobs image stored without a public site URL.");
+      return null;
+    }
+
+    const encodedKey = key
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+
+    return `${base.replace(/\/$/, "")}/api/offers/image/${encodedKey}`;
+  } catch (error) {
+    console.error(
+      "Netlify Blobs image fallback failed:",
       error instanceof Error ? error.message : "unknown error",
     );
     return null;
