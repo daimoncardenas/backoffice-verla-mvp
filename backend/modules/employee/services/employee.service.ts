@@ -644,6 +644,15 @@ export async function createEmployee(
 ): Promise<EmployeeDocument> {
   await assertPermission(context, "EMPLOYEE_CREATE");
 
+  if (
+    input.additional_permission !== undefined &&
+    context.account_type !== "ORGANIZATION"
+  ) {
+    throw new EmployeeAccessError(
+      "Solo la organización puede asignar permisos adicionales",
+    );
+  }
+
   const employeeType = await loadActiveEmployeeType(
     context,
     input.employee_type_id,
@@ -805,6 +814,15 @@ export async function updateEmployee(
   requestId: string,
 ): Promise<EmployeeDocument> {
   await assertPermission(context, "EMPLOYEE_UPDATE");
+
+  if (
+    input.additional_permission !== undefined &&
+    context.account_type !== "ORGANIZATION"
+  ) {
+    throw new EmployeeAccessError(
+      "Solo la organización puede asignar permisos adicionales",
+    );
+  }
 
   if (!Number.isInteger(input.expectedVersion) || input.expectedVersion < 0) {
     throw new EmployeeValidationError(
