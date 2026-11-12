@@ -15,3 +15,22 @@ export async function listActiveActivityTypeRecords(
     is_active: true,
   }).sort({ code: 1 });
 }
+
+export async function createActivityTypeRecord(
+  record: {
+    organization_id: Types.ObjectId;
+    code: string;
+    name: string;
+    description: string | null;
+    requires_offer: boolean;
+    is_active: boolean;
+    created_by: Types.ObjectId;
+    updated_by: Types.ObjectId;
+    version: number;
+  },
+  session: import("mongoose").ClientSession,
+) {
+  await connectToDatabase();
+  const [created] = await ActivityTypeModel.create([record], { session });
+  return created;
+}

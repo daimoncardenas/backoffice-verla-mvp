@@ -198,6 +198,14 @@ export async function listGoals(
 ): Promise<GoalDocument[]> {
   await assertPermission(context, "GOAL_LIST");
 
+  if (context.account_type === "ORGANIZATION") {
+    await connectToDatabase();
+    return GoalModel.find({
+      organization_id: context.organization_id,
+      deleted_at: null,
+    }).sort({ created_at: -1 });
+  }
+
   return listGoalRecords(context.organization_id, context.partner_id);
 }
 

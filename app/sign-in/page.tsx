@@ -51,14 +51,13 @@ export default async function SignInPage() {
           <Logo size="md" withTagline />
           <h2>Bienvenido de nuevo</h2>
           <p className="signin-sub">
-            Ingresa con tu cuenta de aliado o empleado para continuar.
+            Ingresa con tu cuenta de organización para continuar.
           </p>
 
           <SignInForm />
 
           <p className="signin-meta">
-            Las cuentas de organización pertenecen al backoffice de VERLA y no
-            pueden ingresar a este portal.
+            Solo las cuentas ORGANIZATION pueden acceder al backoffice de VERLA.
           </p>
         </div>
       </section>

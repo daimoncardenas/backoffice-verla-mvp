@@ -583,6 +583,27 @@ export async function listEmployees(
 ): Promise<EmployeeDocument[]> {
   await assertPermission(context, "EMPLOYEE_LIST");
 
+  if (context.account_type === "ORGANIZATION") {
+    await connectToDatabase();
+
+    const filter: Record<string, unknown> = {
+      organization_id: context.organization_id,
+      deleted_at: null,
+    };
+
+    if (filters.employee_type_id) {
+      filter.employee_type_id = filters.employee_type_id;
+    }
+    if (filters.city_id) {
+      filter.city_ids = filters.city_id;
+    }
+    if (filters.status) {
+      filter.status = filters.status;
+    }
+
+    return EmployeeModel.find(filter).sort({ created_at: -1 });
+  }
+
   const filter: Record<string, unknown> = {
     ...employeeScopeFilter(context),
   };

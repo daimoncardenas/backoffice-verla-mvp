@@ -243,6 +243,14 @@ export async function listEmployeeTypes(
 ): Promise<EmployeeTypeDocument[]> {
   await assertPermission(context, "EMPLOYEE_TYPE_LIST");
 
+  if (context.account_type === "ORGANIZATION") {
+    await connectToDatabase();
+    return EmployeeTypeModel.find({
+      organization_id: context.organization_id,
+      deleted_at: null,
+    }).sort({ created_at: 1 });
+  }
+
   return listEmployeeTypeRecords(
     context.organization_id,
     context.partner_id,

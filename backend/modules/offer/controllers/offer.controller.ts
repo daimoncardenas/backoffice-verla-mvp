@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { NextResponse } from "next/server";
 
 import { ForbiddenError } from "../../authorization/services/permission.service";
+import { AiRunModel } from "../../ai-run/entities/ai-run.entity";
 import type { AuthContext } from "../../auth/types/auth.types";
 import {
   OfferConflictError,
@@ -11,6 +12,7 @@ import {
 import {
   createOffer,
   discardOffer,
+  getOrganizationOffer,
   getVisibleOffer,
   listAllOffers,
   listVisibleOffers,
@@ -92,6 +94,9 @@ export function serializeOffer(offer: OfferDocument) {
     status: offer.status,
     published_at: offer.published_at?.toISOString() ?? null,
     version: offer.version,
+    origin: offer.origin,
+    strategy_summary: offer.strategy_summary,
+    pending_questions: [...offer.pending_questions],
     commercial_terms: offer.commercial_terms
       ? {
           price_amount: offer.commercial_terms.price_amount,
@@ -114,9 +119,35 @@ export async function handleGet(
   context: AuthContext,
   offerId: string,
 ) {
-  const offer = await getVisibleOffer(context, parseOfferId(offerId));
+  const offer =
+    context.account_type === "ORGANIZATION"
+      ? await getOrganizationOffer(context, parseOfferId(offerId))
+      : await getVisibleOffer(context, parseOfferId(offerId));
 
-  return { offer: serializeOffer(offer) };
+  let research = null;
+
+  if (offer.ai_run_id) {
+    const run = await AiRunModel.findOne({
+      _id: offer.ai_run_id,
+      organization_id: context.organization_id,
+    })
+      .select("sources research_text config_version")
+      .lean();
+
+    if (run) {
+      research = {
+        sources: (run.sources ?? []).map((source) => ({
+          url: source.url,
+          title: source.title,
+          consulted_at: source.consulted_at.toISOString(),
+        })),
+        research_text: run.research_text,
+        config_version: run.config_version,
+      };
+    }
+  }
+
+  return { offer: serializeOffer(offer), research };
 }
 
 export async function handleCreate(

@@ -5,11 +5,9 @@ import { Types } from "mongoose";
 import {
   findAccountByEmail,
   findAccountById,
-  findEmployeeById,
   findOrganizationById,
-  findPartnerById,
 } from "../repository/auth.repository";
-import type { AuthContext, LoginAccountType } from "../types/auth.types";
+import type { AuthContext } from "../types/auth.types";
 import { signSessionToken, verifySessionToken } from "./jwt.service";
 import { verifyPassword } from "./password.service";
 
@@ -35,11 +33,7 @@ async function resolveContext(
     return null;
   }
 
-  if (
-    account.account_type !== "ORGANIZATION" &&
-    account.account_type !== "PARTNER" &&
-    account.account_type !== "EMPLOYEE"
-  ) {
+  if (account.account_type !== "ORGANIZATION") {
     return null;
   }
 
@@ -49,73 +43,20 @@ async function resolveContext(
     return null;
   }
 
-  if (account.account_type === "ORGANIZATION") {
-    return {
-      account_id: account._id,
-      display_name: account.display_name,
-      email: account.email,
-      account_type: "ORGANIZATION",
-      theme: account.theme,
-      organization_id: organization._id,
-      organization_name: organization.name,
-      timezone: organization.timezone,
-      // Organization accounts have no partner scope. The organization id keeps
-      // the shared AuthContext type stable for the copied modules.
-      partner_id: organization._id,
-      employee_id: null,
-      supervisor_id: null,
-    };
-  }
-
-  if (!account.partner_id) {
-    return null;
-  }
-
-  const accountType: LoginAccountType = account.account_type;
-
-  const partner = await findPartnerById(
-    account.partner_id,
-    account.organization_id,
-  );
-
-  if (!partner || partner.status !== "ACTIVE" || partner.deleted_at) {
-    return null;
-  }
-
-  let employeeId: Types.ObjectId | null = null;
-  let supervisorId: Types.ObjectId | null = null;
-
-  if (accountType === "EMPLOYEE") {
-    if (!account.employee_id) {
-      return null;
-    }
-
-    const employee = await findEmployeeById(
-      account.employee_id,
-      account.organization_id,
-      account.partner_id,
-    );
-
-    if (!employee || !isEmployeeSessionEligible(employee)) {
-      return null;
-    }
-
-    employeeId = employee._id;
-    supervisorId = employee.supervisor_id;
-  }
-
   return {
     account_id: account._id,
     display_name: account.display_name,
     email: account.email,
-    account_type: accountType,
+    account_type: "ORGANIZATION",
     theme: account.theme,
     organization_id: organization._id,
     organization_name: organization.name,
     timezone: organization.timezone,
-    partner_id: partner._id,
-    employee_id: employeeId,
-    supervisor_id: supervisorId,
+    // Organization accounts have no partner scope. The organization id keeps
+    // the shared AuthContext type stable for the copied modules.
+    partner_id: organization._id,
+    employee_id: null,
+    supervisor_id: null,
   };
 }
 

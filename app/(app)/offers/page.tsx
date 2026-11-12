@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
 import { useSession } from "../../components/session-context";
@@ -55,6 +56,9 @@ export default function OffersPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const rows = useMemo(() => offers.data?.offers ?? [], [offers.data]);
+  const draftCount = rows.filter((offer) => offer.status === "DRAFT").length;
+  const publishedCount = rows.filter((offer) => offer.status === "PUBLISHED").length;
+  const archivedCount = rows.filter((offer) => offer.status === "ARCHIVED").length;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -124,6 +128,25 @@ export default function OffersPage() {
         }
       />
 
+      <div className="stat-grid">
+        <div className="stat-card">
+          <span className="stat-label">Ofertas</span>
+          <strong className="stat-value">{rows.length}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Borradores</span>
+          <strong className="stat-value">{draftCount}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Publicadas</span>
+          <strong className="stat-value">{publishedCount}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Archivadas</span>
+          <strong className="stat-value">{archivedCount}</strong>
+        </div>
+      </div>
+
       {actionError ? (
         <Alert
           tone="error"
@@ -171,7 +194,7 @@ export default function OffersPage() {
                     <th>Estado</th>
                     <th>Inicio</th>
                     <th>Fin</th>
-                    <th aria-label="Acciones" />
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -179,7 +202,9 @@ export default function OffersPage() {
                     <tr key={offer.id}>
                       <td>
                         <div className="cell-stack">
-                          <strong>{offer.title}</strong>
+                          <Link href={`/offers/${offer.id}`} className="table-link">
+                            {offer.title}
+                          </Link>
                           <span>{offer.content.slice(0, 80)}</span>
                         </div>
                       </td>
@@ -192,6 +217,12 @@ export default function OffersPage() {
                       <td>{formatDate(offer.ends_at)}</td>
                       <td>
                         <div className="row-actions">
+                          <Link
+                            href={`/offers/${offer.id}`}
+                            className="btn btn-ghost btn-sm"
+                          >
+                            Ver
+                          </Link>
                           {offer.status === "DRAFT" && canPublish ? (
                             <Button
                               size="sm"

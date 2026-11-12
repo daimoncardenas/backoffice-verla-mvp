@@ -338,6 +338,7 @@ function serializeAssignment(assignment: AssignmentDocument) {
 function serializeEmployee(employee: EmployeeDetail["employee"]) {
   return {
     id: employee._id.toString(),
+    partner_id: employee.partner_id.toString(),
     employee_type_id: employee.employee_type_id.toString(),
     first_name: employee.first_name,
     last_name: employee.last_name,

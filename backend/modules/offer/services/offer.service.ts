@@ -49,6 +49,31 @@ export async function getVisibleOffer(
   return offer;
 }
 
+export async function getOrganizationOffer(
+  context: AuthContext,
+  offerId: Types.ObjectId,
+): Promise<OfferDocument> {
+  await assertPermission(context, "OFFER_READ");
+
+  if (context.account_type !== "ORGANIZATION") {
+    throw new OfferNotFoundError();
+  }
+
+  await connectToDatabase();
+
+  const offer = await OfferModel.findOne({
+    _id: offerId,
+    organization_id: context.organization_id,
+    deleted_at: null,
+  });
+
+  if (!offer) {
+    throw new OfferNotFoundError();
+  }
+
+  return offer;
+}
+
 export async function listAllOffers(
   context: AuthContext,
 ): Promise<OfferDocument[]> {

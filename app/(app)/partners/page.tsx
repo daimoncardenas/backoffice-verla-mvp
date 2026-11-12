@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useMemo, useState, type FormEvent } from "react";
 
 import { useSession } from "../../components/session-context";
 import {
@@ -47,6 +48,14 @@ export default function PartnersPage() {
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const rows = useMemo(() => {
+    const list = partners.data?.partners ?? [];
+    return statusFilter
+      ? list.filter((partner) => partner.status === statusFilter)
+      : list;
+  }, [partners.data, statusFilter]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,15 +115,44 @@ export default function PartnersPage() {
         }
       />
 
+      <div className="stat-grid">
+        <div className="stat-card">
+          <span className="stat-label">Aliados</span>
+          <strong className="stat-value">{rows.length}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Activos</span>
+          <strong className="stat-value">
+            {rows.filter((partner) => partner.status === "ACTIVE").length}
+          </strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Inactivos / bloqueados</span>
+          <strong className="stat-value">
+            {rows.filter((partner) => partner.status !== "ACTIVE").length}
+          </strong>
+        </div>
+      </div>
+
       <Card>
         <CardHeader
           title="Aliados registrados"
           description="Los aliados creados quedan activos y habilitados con los permisos del catálogo."
         />
-        <div className="card-body">
+        <div className="card-body stack">
+          <Select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label="Filtrar aliados por estado"
+          >
+            <option value="">Todos los estados</option>
+            <option value="ACTIVE">Activos</option>
+            <option value="INACTIVE">Inactivos</option>
+            <option value="BLOCKED">Bloqueados</option>
+          </Select>
           {partners.error ? <Alert tone="error">{partners.error}</Alert> : null}
           {partners.loading ? <Spinner label="Cargando aliados…" /> : null}
-          {!partners.loading && (partners.data?.partners.length ?? 0) === 0 ? (
+          {!partners.loading && rows.length === 0 ? (
             <EmptyState
               title="Sin aliados"
               description="Crea el primer aliado para conectarlo a la red."
@@ -127,7 +165,7 @@ export default function PartnersPage() {
               }
             />
           ) : null}
-          {(partners.data?.partners.length ?? 0) > 0 ? (
+          {rows.length > 0 ? (
             <div className="table-wrap">
               <table className="table">
                 <thead>
@@ -139,11 +177,13 @@ export default function PartnersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {partners.data?.partners.map((partner) => (
+                  {rows.map((partner) => (
                     <tr key={partner.id}>
                       <td>
                         <div className="cell-stack">
-                          <strong>{partner.name}</strong>
+                          <Link href={`/partners/${partner.id}`} className="table-link">
+                            {partner.name}
+                          </Link>
                           <span>{partner.legal_name}</span>
                         </div>
                       </td>

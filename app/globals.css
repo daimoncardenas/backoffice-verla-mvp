@@ -1417,3 +1417,46 @@ p {
     display: none;
   }
 }
+
+.settings-card {
+  display: block;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.settings-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+.settings-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.chat-log {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.chat-message {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+}
+
+.chat-message-assistant {
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+.chat-message p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}

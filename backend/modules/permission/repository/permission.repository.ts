@@ -74,3 +74,23 @@ export async function findPartnerPermissionCeiling(
     organization_id: organizationId,
   }).select("enabled_permission_ids");
 }
+
+export async function createPermissionRecord(
+  record: {
+    organization_id: Types.ObjectId;
+    code: string;
+    resource: string;
+    action: string;
+    name: string;
+    description: string | null;
+    is_active: boolean;
+    created_by: Types.ObjectId;
+    updated_by: Types.ObjectId;
+    version: number;
+  },
+  session: import("mongoose").ClientSession,
+) {
+  await connectToDatabase();
+  const [created] = await PermissionModel.create([record], { session });
+  return created;
+}

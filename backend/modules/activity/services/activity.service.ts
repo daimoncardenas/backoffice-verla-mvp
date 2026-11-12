@@ -23,6 +23,7 @@ import {
   type ActivityType,
 } from "../../activity-type/entities/activity-type.entity";
 import {
+  ActivityModel,
   type Activity,
   type OfferSnapshot,
 } from "../entities/activity.entity";
@@ -512,6 +513,13 @@ export async function listActivities(
 ): Promise<ActivityDocument[]> {
   await assertPermission(context, "ACTIVITY_LIST");
 
+  if (context.account_type === "ORGANIZATION") {
+    await connectToDatabase();
+    return ActivityModel.find({
+      organization_id: context.organization_id,
+    }).sort({ performed_at: -1, _id: -1 });
+  }
+
   const filter: Record<string, unknown> = {
     organization_id: context.organization_id,
     partner_id: context.partner_id,
@@ -530,6 +538,20 @@ export async function getActivity(
   activityId: Types.ObjectId,
 ): Promise<ActivityDocument> {
   await assertPermission(context, "ACTIVITY_READ");
+
+  if (context.account_type === "ORGANIZATION") {
+    await connectToDatabase();
+    const activity = await ActivityModel.findOne({
+      _id: activityId,
+      organization_id: context.organization_id,
+    });
+
+    if (!activity) {
+      throw new ActivityNotFoundError();
+    }
+
+    return activity;
+  }
 
   const { activity } = await loadScopedActivity(context, activityId);
   return activity;

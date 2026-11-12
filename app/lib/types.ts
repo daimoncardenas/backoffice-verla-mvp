@@ -63,6 +63,7 @@ export type EmployeeStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
 
 export interface Employee {
   id: string;
+  partner_id?: string;
   employee_type_id: string;
   first_name: string;
   last_name: string;
@@ -97,6 +98,7 @@ export interface EmployeeDetail {
 
 export interface Goal {
   id: string;
+  partner_id?: string;
   code: string;
   name: string;
   description: string | null;
@@ -168,6 +170,10 @@ export interface Offer {
   published_at: string | null;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   version?: number;
+  origin?: "MANUAL" | "AI_ASSISTED";
+  ai_run_id?: string | null;
+  strategy_summary?: string | null;
+  pending_questions?: string[];
   commercial_terms: {
     price_amount: string;
     currency: string;

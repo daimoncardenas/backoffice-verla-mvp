@@ -43,23 +43,17 @@ export default async function AuthenticatedLayout({
     nav.push({ href: "/partners", label: "Partners", icon: "◆" });
   }
 
+  if (hasPermission(permissions, "ACTIVITY_LIST")) {
+    nav.push({ href: "/activities", label: "Activities", icon: "◉" });
+  }
+
   if (hasPermission(permissions, "OFFER_LIST")) {
     nav.push({ href: "/offers", label: "Ofertas", icon: "◇" });
   }
 
-  if (hasPermission(permissions, "ACTIVITY_TYPE_LIST")) {
-    nav.push({
-      href: "/activity-types",
-      label: "Activity types",
-      icon: "▤",
-    });
+  if (hasPermission(permissions, "PROFILE_READ")) {
+    nav.push({ href: "/settings", label: "Settings", icon: "⚙" });
   }
-
-  nav.push({
-    href: "/settings/ai-search",
-    label: "AI search",
-    icon: "◎",
-  });
 
   return (
     <SessionProvider user={session}>

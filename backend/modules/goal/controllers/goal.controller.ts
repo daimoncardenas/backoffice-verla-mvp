@@ -164,6 +164,7 @@ export function parseDeleteInput(body: unknown) {
 export function serializeGoal(goal: GoalDocument) {
   return {
     id: goal._id.toString(),
+    partner_id: goal.partner_id.toString(),
     code: goal.code,
     name: goal.name,
     description: goal.description,
