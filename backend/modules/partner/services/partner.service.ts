@@ -8,7 +8,9 @@ import {
   ForbiddenError,
 } from "../../authorization/services/permission.service";
 import type { AuthContext } from "../../auth/types/auth.types";
+import { hashPassword } from "../../auth/services/password.service";
 import { PermissionModel } from "../../permission/entities/permission.entity";
+import { UserAccountModel } from "../../user-account/entities/user-account.entity";
 import { recordHistoryChange } from "../../history-change/services/history.service";
 import { PartnerModel, type Partner } from "../entities/partner.entity";
 
@@ -74,6 +76,14 @@ export async function listPartners(context: AuthContext) {
   }).sort({ created_at: -1 });
 }
 
+function defaultPartnerPassword(): string {
+  return (
+    process.env.DEFAULT_PARTNER_PASSWORD ??
+    process.env.DEFAULT_EMPLOYEE_PASSWORD ??
+    "1234567"
+  );
+}
+
 export async function createPartner(
   context: AuthContext,
   input: CreatePartnerInput,
@@ -86,6 +96,17 @@ export async function createPartner(
   }
 
   await connectToDatabase();
+
+  const accountEmail = input.contact_email.trim().toLowerCase();
+  const existingAccount = await UserAccountModel.findOne({ email: accountEmail });
+
+  if (existingAccount) {
+    throw new PartnerConflictError(
+      "Ya existe una cuenta con ese correo de contacto.",
+    );
+  }
+
+  const passwordHash = await hashPassword(defaultPartnerPassword());
 
   const existing = await PartnerModel.findOne({
     organization_id: context.organization_id,
@@ -146,6 +167,31 @@ export async function createPartner(
 
       createdId = document._id;
 
+      const [account] = await UserAccountModel.create(
+        [
+          {
+            organization_id: context.organization_id,
+            partner_id: document._id,
+            employee_id: null,
+            account_type: "PARTNER",
+            display_name: input.contact_name,
+            email: accountEmail,
+            password_hash: passwordHash,
+            status: "ACTIVE",
+            token_version: 0,
+            last_login_at: null,
+            theme: "SYSTEM",
+            deleted_at: null,
+            deleted_by: null,
+            is_service: false,
+            created_by: context.account_id,
+            updated_by: context.account_id,
+            version: 0,
+          },
+        ],
+        { session },
+      );
+
       await recordHistoryChange(
         session,
         {
@@ -172,6 +218,30 @@ export async function createPartner(
               document.enabled_permission_ids.map((id) => id.toString()),
             status: document.status,
             version: document.version,
+          },
+        },
+      );
+
+      await recordHistoryChange(
+        session,
+        {
+          organization_id: context.organization_id,
+          partner_id: document._id,
+          actor_user_id: context.account_id,
+          request_id: requestId,
+        },
+        {
+          entity_name: "user_account",
+          record_id: account._id,
+          action: "CREATE",
+          previous_values: null,
+          new_values: {
+            account_type: account.account_type,
+            partner_id: document._id.toString(),
+            employee_id: null,
+            email: account.email,
+            status: account.status,
+            version: account.version,
           },
         },
       );
