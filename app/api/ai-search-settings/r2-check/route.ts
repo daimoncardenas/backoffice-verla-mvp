@@ -16,11 +16,11 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const endpoint = process.env.R2_ENDPOINT;
-  const bucket = process.env.R2_BUCKET;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const publicBase = process.env.R2_PUBLIC_BASE;
+  const endpoint = process.env.R2_ENDPOINT?.trim();
+  const bucket = process.env.R2_BUCKET?.trim();
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
+  const publicBase = process.env.R2_PUBLIC_BASE?.trim();
 
   if (
     !endpoint ||
